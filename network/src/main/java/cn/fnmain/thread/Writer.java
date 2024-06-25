@@ -1,8 +1,5 @@
 package cn.fnmain.thread;
 
-import cn.fnmain.Constants;
-import cn.fnmain.execption.ExceptionType;
-import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.config.WriterConfig;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,9 +13,7 @@ public class Writer {
     }
 
     public void submit(WriterTask writerTask) {
-        if (writerTask == null || !queue.offer()) {
-            throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
-        }
+
     }
 
 

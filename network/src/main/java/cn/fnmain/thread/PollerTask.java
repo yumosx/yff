@@ -1,5 +1,5 @@
 package cn.fnmain.thread;
 
-public record PollerTask(PollerTaskType type) {
+import cn.fnmain.netapi.Channel;
 
-}
+public record PollerTask( PollerTaskType type, Channel channel, Object msg) {}

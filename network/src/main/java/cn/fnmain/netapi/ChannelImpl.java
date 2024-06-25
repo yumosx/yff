@@ -41,4 +41,9 @@ public record ChannelImpl() implements Channel {
     public Loc loc() {
         return null;
     }
+
+    @Override
+    public void sendMsg(String msg) {
+
+    }
 }

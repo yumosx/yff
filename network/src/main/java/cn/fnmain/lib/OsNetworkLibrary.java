@@ -1,9 +1,11 @@
-package cn.fnmain;
+package cn.fnmain.lib;
 
+import cn.fnmain.*;
 import cn.fnmain.config.IpType;
 import cn.fnmain.config.SocketConfig;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.thread.SocketAndLoc;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemoryLayout;

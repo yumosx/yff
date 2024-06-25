@@ -1,6 +1,10 @@
 package cn.fnmain.node;
 
-public interface PollerNode {
+import java.lang.foreign.MemorySegment;
 
+public interface PollerNode {
+    void onReadableEvent(MemorySegment ptr, int len);
+    void onWriteableEvent();
+    void exit();
     void doExit();
 }

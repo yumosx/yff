@@ -13,4 +13,6 @@ public interface Channel {
     Poller poller();
     Writer writer();
     Loc loc();
+
+    void sendMsg(String msg);
 }
