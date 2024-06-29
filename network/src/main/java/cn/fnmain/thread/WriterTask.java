@@ -1,4 +1,11 @@
 package cn.fnmain.thread;
 
-public class WriterTask {
-}
+import cn.fnmain.netapi.Channel;
+import cn.fnmain.node.WriterCallback;
+
+public record WriterTask(
+        WriterTaskType type,
+        Channel channel,
+        Object msg,
+        WriterCallback writerCallback
+) {}

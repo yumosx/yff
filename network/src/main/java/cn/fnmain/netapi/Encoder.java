@@ -1,8 +1,8 @@
 package cn.fnmain.netapi;
 
-import cn.fnmain.WriterBuffer;
+import cn.fnmain.WriteBuffer;
 
 @FunctionalInterface
 public interface Encoder {
-    void encode(WriterBuffer writerBuffer, Object o);
+    void encode(WriteBuffer writerBuffer, Object o);
 }
