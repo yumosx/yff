@@ -6,6 +6,7 @@ import cn.fnmain.node.WriterCallback;
 import cn.fnmain.thread.Poller;
 import cn.fnmain.thread.Writer;
 
+import java.time.Duration;
 import java.util.Collection;
 
 public interface Channel {
@@ -25,4 +26,12 @@ public interface Channel {
         sendMultipleMsg(msgs, null);
     }
 
+    void shutdown(Duration duration);
+
+    Duration defaultSendTimeoutDuration = Duration.ofSeconds(30);
+    Duration DefaultShutDownDuration = Duration.ofSeconds(5);
+
+    default void shutdown() {
+        shutdown(DefaultShutDownDuration);
+    }
 }

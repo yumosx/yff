@@ -9,6 +9,7 @@ import cn.fnmain.thread.Writer;
 import cn.fnmain.thread.WriterTask;
 import cn.fnmain.thread.WriterTaskType;
 
+import java.time.Duration;
 import java.util.Collection;
 
 public record ChannelImpl(Socket socket, Encoder encoder, Decoder decoder, Handler handler, Poller poller, Writer writer)
@@ -65,5 +66,10 @@ public record ChannelImpl(Socket socket, Encoder encoder, Decoder decoder, Handl
         }
 
         writer.submit(new WriterTask(WriterTaskType.MULTIPLE_MSG, this, msgs, writerCallback));
+    }
+
+    @Override
+    public void shutdown(Duration duration) {
+
     }
 }

@@ -32,13 +32,15 @@ public class Poller {
     }
 
     private Thread createPollerThread(PollerConfig pollerConfig) {
-        return null;
+        int sequence = counter.incrementAndGet();
+        return Thread.ofPlatform().name(STR."").unstarted(()->{
+
+        });
     }
 
     public Poller(PollerConfig  pollerConfig) {
         this.pollerThread = createPollerThread(pollerConfig);
     }
-
 
     private void handleBindMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
         Channel channel = pollerTask.channel();
@@ -55,10 +57,13 @@ public class Poller {
             if (pollerTask == null) {
                 return channelState;
             }
-
             switch (pollerTask.type()) {
                 case BIND:  handleBindMsg(nodeMap, pollerTask);
             }
         }
+    }
+
+    public void submit(PollerTask pollerTask) {
+
     }
 }

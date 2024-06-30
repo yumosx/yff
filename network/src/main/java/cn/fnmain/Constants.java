@@ -34,8 +34,11 @@ public final class Constants {
     public static final int NET_R = Integer.MIN_VALUE | (1 << 8); // register read only
     public static final int NET_PR = Integer.MIN_VALUE | (1 << 10); // register read if possible
     public static final int NET_RW = NET_R | NET_W; // register read and write
+    public static final int NET_PC = Integer.MIN_VALUE | (1 << 12);
+    public static final int NET_WC = Integer.MIN_VALUE | (1 << 16);
     public static final int NET_OTHER = Integer.MIN_VALUE | (1 << 20);
     public static final String SEPARATOR = "/";
+    public static final int NET_PRW = NET_PR | NET_PW;
 
     private Constants() {
         throw new FrameworkException(ExceptionType.CONTEXT, Constants.UNREACHED);

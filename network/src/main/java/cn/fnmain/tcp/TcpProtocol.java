@@ -1,9 +1,13 @@
 package cn.fnmain.tcp;
 
+import cn.fnmain.Constants;
+import cn.fnmain.Socket;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
+import cn.fnmain.thread.WriterTask;
+import cn.fnmain.thread.WriterTaskType;
 
 import java.lang.foreign.MemorySegment;
 
@@ -23,12 +27,25 @@ public record TcpProtocol(Channel channel) implements Protocol {
 
     @Override
     public int onWritableEvent() {
+        channel.writer().submit(new WriterTask(WriterTaskType.WRITABLE, channel, null, null));
         return 0;
     }
 
     @Override
     public int doWrite(MemorySegment data, int len) {
-        return 0;
+        Socket socket = channel.socket();
+        int t = os.send(socket, data, len);
+
+        if (t < 0) {
+            int errno = Math.abs(t);
+            if (errno == os.sendBlockCode()) {
+                return Constants.NET_PW;
+            } else {
+                throw new FrameworkException(ExceptionType.NETWORK, STR."failed to perform send(), errno: \{errno}");
+            }
+        } else {
+            return t;
+        }
     }
 
     @Override

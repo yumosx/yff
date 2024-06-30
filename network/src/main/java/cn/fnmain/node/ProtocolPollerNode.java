@@ -9,9 +9,11 @@ import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
 import cn.fnmain.netapi.TaggedResult;
 import cn.fnmain.tcp.Protocol;
+import cn.fnmain.thread.PollerTask;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,10 +28,11 @@ public class ProtocolPollerNode implements PollerNode {
 
     private OsNetworkLibrary osNetworkLibrary = OsNetworkLibrary.CURRENT;
 
-    public ProtocolPollerNode(IntMap<PollerNode> nodeMap, Protocol protocol, Channel channel) {
+    public ProtocolPollerNode(IntMap<PollerNode> nodeMap, Protocol protocol, Channel channel, State channelState) {
         this.nodeMap = nodeMap;
         this.protocol = protocol;
         this.channel = channel;
+        this.channelState = channelState;
     }
 
     private long process(MemorySegment memorySegment) {
@@ -92,10 +95,7 @@ public class ProtocolPollerNode implements PollerNode {
         }
     }
 
-
-    /*
-    在接收的时候我们会判断一下具体的情况
-    */
+    //我们在处理接收消息
     public void handleReceived(MemorySegment ptr, int len, int r) {
         if (r == len) {
             onReceive(ptr);
@@ -142,16 +142,32 @@ public class ProtocolPollerNode implements PollerNode {
     }
 
     @Override
-    public void exit() {
-
+    public void onClose(PollerTask pollerTask) {
+        if (pollerTask.channel() == channel) {
+            close();
+        }
     }
 
     @Override
-    public void doExit() {
-
+    public void exit(Duration duration) {
+        channel.shutdown(duration);
     }
 
     public void close() {
+        if (nodeMap.remove(channel.socket().intValue(), this)) {
+            if (tempBuffer != null) {
+                tempBuffer.close();
+                tempBuffer = null;
+            }
+            //TODO一些退出的逻辑并没有写好
+        }
+    }
 
+    private void closeProtocol() {
+        try {
+            protocol.doClose();
+        } catch (RuntimeException e) {
+            System.out.println("failed to close protocol");
+        }
     }
 }

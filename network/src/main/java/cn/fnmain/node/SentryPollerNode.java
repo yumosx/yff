@@ -5,9 +5,15 @@ import cn.fnmain.State;
 import cn.fnmain.lib.IntMap;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
+import cn.fnmain.tcp.Protocol;
 import cn.fnmain.tcp.Sentry;
+import cn.fnmain.thread.PollerTask;
+import cn.fnmain.thread.PollerTaskType;
+import cn.fnmain.thread.WriterTask;
+import cn.fnmain.thread.WriterTaskType;
 
 import java.lang.foreign.MemorySegment;
+import java.time.Duration;
 
 public class SentryPollerNode implements PollerNode {
     private IntMap<PollerNode> map;
@@ -33,7 +39,17 @@ public class SentryPollerNode implements PollerNode {
     }
 
     public void updateProtocol() {
-
+        try {
+            channel.handler().onConnected(channel);
+        } catch (RuntimeException e) {
+            System.out.println("err occurred in onConnected");
+            close();
+        }
+        ctl(Constants.NET_R);
+        Protocol protocol = sentry.toProtocol();
+        ProtocolPollerNode protocolPollerNode = new ProtocolPollerNode(map, protocol, channel, channelState);
+        map.replace(channel.socket().intValue(), this, protocolPollerNode);
+        channel.writer().submit(new WriterTask(WriterTaskType.INITIATE, channel, new ProtoAndState(protocol, channelState), null));
     }
 
     public void handleEvent(int id) {
@@ -54,21 +70,35 @@ public class SentryPollerNode implements PollerNode {
     }
 
     @Override
-    public void exit() {
-
-    }
-
-    public void close() {
-
+    public void onClose(PollerTask pollerTask) {
+        if (pollerTask.channel() == channel) {
+            close();
+        }
     }
 
     @Override
-    public void doExit() {
+    public void exit(Duration duration) {
         close();
     }
 
+    public void close() {
+        if (map.remove(channel.socket().intValue(), this)) {
+            closeSentry();
+            if (map.isEmpty()) {
+                channel.poller().submit(new PollerTask(PollerTaskType.POTENTIAL_EXIT, null, null));
+            }
+        }
+    }
 
     public void closeSentry() {
+        try {
+            sentry.doClose();
+        } catch (RuntimeException e) {
+            System.out.println("failed to close sentry");
+        }
 
+        if (callback != null) {
+            Thread.ofVirtual().start(callback);
+        }
     }
 }
