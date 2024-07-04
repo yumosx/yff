@@ -4,6 +4,11 @@ import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 
 public final class Constants {
+    //用于writerbuffer
+    public static final int KB = 1024;
+    public static final int MB = 1024 * KB;
+    public static final int GB = 1024 * MB;
+
     public static final int INITIAL = 0;
     public static final int STARTING = 1;
     public static final int RUNNING = 2;

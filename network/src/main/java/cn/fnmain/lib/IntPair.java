@@ -1,4 +1,4 @@
 package cn.fnmain.lib;
 
-public class IntPair {
+public record IntPair(int first, int second) {
 }
