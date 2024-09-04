@@ -1,6 +1,6 @@
 package cn.fnmain.thread;
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.Mux;
 import cn.fnmain.State;
 import cn.fnmain.Timeout;
@@ -12,8 +12,10 @@ import cn.fnmain.lib.IntPair;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
 import cn.fnmain.node.PollerNode;
-import cn.fnmain.node.SentryPollerNode;
-import cn.fnmain.tcp.Sentry;
+import cn.fnmain.node.impl.SentryPollerNode;
+import cn.fnmain.protocol.Sentry;
+import org.jctools.queues.MpscUnboundedArrayQueue;
+import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemoryLayout;
@@ -24,12 +26,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Poller {
     private final Thread pollerThread;
-    private Mux mux;
-    private IntMap<PollerNode> nodeMap;
-    private State channelState;
-    private Queue<PollerTask> queue;
-    private OsNetworkLibrary os = OsNetworkLibrary.CURRENT;
     private static final AtomicInteger counter = new AtomicInteger(0);
+    private Queue<PollerTask> queue = new MpscUnboundedAtomicArrayQueue<>(Constants.KB);
+    private OsNetworkLibrary os = OsNetworkLibrary.CURRENT;
+    private Mux mux = os.createMux();
 
     public Mux mux() {
         return mux;
@@ -39,9 +39,6 @@ public class Poller {
         return pollerThread;
     }
 
-    /*
-     这是一个辅助函数, 这个函数主要的作用是为了检查返回的操作码
-     */
     public boolean checkErr(int t) {
         if (t < 0) {
             int errno = Math.abs(t);
@@ -54,23 +51,49 @@ public class Poller {
         return true;
     }
 
-    /*
-    连接的认证
-    也就是处理bind消息，这个阶段会调用对应sentryPollerNode
-    */
     private void handleBindMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
         Channel channel = pollerTask.channel();
         SentryPollerNode sentryPollerNode = switch (pollerTask.msg()) {
-            case Sentry sentry -> new SentryPollerNode(nodeMap, channel, sentry, null);
+            case Sentry sentry -> new SentryPollerNode(map, channel, sentry, null);
             default -> throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
         };
-        nodeMap.put(channel.socket().intValue(), sentryPollerNode);
+
+        map.put(channel.socket().intValue(), sentryPollerNode);
     }
 
-    /*
-    消费者函数
-    根据不同的任务类型，来执行相应的操作, 主要是转构造对应的节点
-    */
+    private void handleUnBindMsg(IntMap<PollerNode>map, PollerTask pollerTask) {
+        Channel channel = pollerTask.channel();
+        PollerNode pollerNode = map.get(channel.socket().intValue());
+        if (pollerNode instanceof SentryPollerNode sentryPollerNode) {
+            sentryPollerNode.onClose(pollerTask);
+        }
+    }
+
+    private void handleRegisterMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
+        Channel channel = pollerTask.channel();
+        PollerNode pollerNode = map.get(channel.socket().intValue());
+        if (pollerNode != null) {
+            pollerNode.onRegisterTaggedMsg(pollerTask);
+        }
+    }
+
+    private void handleUnRegisterMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
+        Channel channel = pollerTask.channel();
+        PollerNode pollerNode = map.get(channel.socket().intValue());
+        if (pollerNode != null) {
+            pollerNode.onUnRegisterTaggedMsg(pollerTask);
+        }
+    }
+
+    private void handleCloseMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
+        Channel channel = pollerTask.channel();
+        PollerNode pollerNode = map.get(channel.socket().intValue());
+        if (pollerNode != null) {
+            pollerNode.onClose(pollerTask);
+        }
+    }
+
+
     public int processTask(IntMap nodeMap, int state) {
         while (true) {
             PollerTask pollerTask = queue.poll();
@@ -78,11 +101,30 @@ public class Poller {
             if (pollerTask == null) {
                 return state;
             }
+
             switch (pollerTask.type()) {
                 case BIND:  handleBindMsg(nodeMap, pollerTask);
+                case UNBIND: handleUnBindMsg(nodeMap, pollerTask);
+                case REGISTER: handleRegisterMsg(nodeMap, pollerTask);
+                case UNREGISTER: handleUnRegisterMsg(nodeMap, pollerTask);
+                case CLOSE: handleCloseMsg(nodeMap, pollerTask);
             }
         }
     }
+    private void processEvent(PollerNode pollerNode, int event, MemorySegment segment, int size) {
+        switch (event) {
+            case Constants.NET_R:
+                pollerNode.onReadableEvent(segment, size);
+                break;
+            case Constants.NET_W:
+            case Constants.NET_OTHER:
+                pollerNode.onWriteableEvent();
+                break;
+            default:
+                throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
+        }
+    }
+
 
     private Thread createPollerThread(PollerConfig pollerConfig) {
         int sequence = counter.getAndIncrement();
@@ -93,10 +135,13 @@ public class Poller {
 
             try (Arena arena = Arena.ofConfined()) {
                 int maxEvent = pollerConfig.getMaxEvent();
+                System.out.println(maxEvent);
 
-                //分配对应的内存
+                Timeout timeout = Timeout.of(arena, pollerConfig.getMuxTimeout());
+
                 MemorySegment events = arena.allocate(MemoryLayout.sequenceLayout(maxEvent, os.eventLayout()));
                 MemorySegment[] reversedArray = new MemorySegment[maxEvent];
+
                 int readBufferSize = pollerConfig.getReadBufferSize();
 
                 for (int i = 0; i < reversedArray.length; i++) {
@@ -104,41 +149,33 @@ public class Poller {
                 }
 
                 int state = Constants.RUNNING;
-                Timeout timeout = Timeout.of(arena, pollerConfig.getMuxTimeout());
 
                 while (true) {
-                    //操作系统作为监听者
                     int t = os.muxWait(mux, events, maxEvent, timeout);
+                    if (!checkErr(t))
+                        return;
 
-                    if (!checkErr(t)) return;
-                    state = processTask(nodeMap, state);
-                    if (state == Constants.STOPPED) break;
+                    state = processTask(nodeIntMap, state);
+                    if (state == Constants.STOPPED)
+                        break;
 
                     for (int i = 0; i < t; i++) {
                         MemorySegment reversed = reversedArray[i];
                         IntPair pair = os.access(events, i);
 
-                        //通过这种nodeMap来维护
                         PollerNode pollerNode = nodeIntMap.get(pair.first());
 
                         if (pollerNode != null) {
                             int event = pair.second();
-
-                            if (event == Constants.NET_W) {
-                                pollerNode.onWriteableEvent();
-                            } else if (event == Constants.NET_R || event == Constants.NET_OTHER) {
-                                pollerNode.onReadableEvent(reversed, readBufferSize);
-                            } else {
-                                throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
-                            }
+                            processEvent(pollerNode, event, reversed, readBufferSize);
                         }
                     }
+
                 }
             } finally {
                 System.out.println(STR."exiting poller thread-\{sequence}");
                 os.exitMux(mux);
             }
-
         });
     }
 

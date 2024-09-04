@@ -1,7 +1,7 @@
 package cn.fnmain.config;
 
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.NativeUtil;
 
 public class PollerConfig {

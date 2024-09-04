@@ -1,14 +1,15 @@
-package cn.fnmain.node;
-
+package cn.fnmain.node.impl;
 
 import cn.fnmain.*;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.lib.IntMap;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
 import cn.fnmain.netapi.TaggedResult;
-import cn.fnmain.tcp.Protocol;
+import cn.fnmain.node.PollerNode;
+import cn.fnmain.protocol.Protocol;
 import cn.fnmain.thread.PollerTask;
 
 import java.lang.foreign.Arena;
@@ -45,7 +46,6 @@ public class ProtocolPollerNode implements PollerNode {
             return -1;
         }
 
-        //解析完成，调用handler来处理我们的对象
         if (!entityList.isEmpty()) {
             for (Object entity : entityList) {
                 TaggedResult taggedResult = null;
@@ -82,7 +82,7 @@ public class ProtocolPollerNode implements PollerNode {
                 tempBuffer = WriteBuffer.newDefaultWriteBuffer(Arena.ofConfined(), len);
                 tempBuffer.writeSegment(readIndex == 0 ? memorySegment : memorySegment.asSlice(readIndex, len - readIndex));
             }
-        } else {    //如果备份缓冲区，那么需要进行拼接
+        } else {
             tempBuffer.writeSegment(memorySegment);
             long len = tempBuffer.writeIndex();
             long readIndex = process(tempBuffer.toSegment());
@@ -95,7 +95,7 @@ public class ProtocolPollerNode implements PollerNode {
         }
     }
 
-    //我们在处理接收消息
+
     public void handleReceived(MemorySegment ptr, int len, int r) {
         if (r == len) {
             onReceive(ptr);
@@ -138,7 +138,22 @@ public class ProtocolPollerNode implements PollerNode {
 
     @Override
     public void onWriteableEvent() {
-        protocol.onWritableEvent();
+        int r;
+        r = protocol.onWritableEvent();
+
+        if (r < 0) {
+            handleEvent(r);
+        }
+    }
+
+    @Override
+    public void onRegisterTaggedMsg(PollerTask pollerTask) {
+
+    }
+
+    @Override
+    public void onUnRegisterTaggedMsg(PollerTask pollerTask) {
+
     }
 
     @Override
@@ -159,7 +174,7 @@ public class ProtocolPollerNode implements PollerNode {
                 tempBuffer.close();
                 tempBuffer = null;
             }
-            //TODO一些退出的逻辑并没有写好
+
         }
     }
 

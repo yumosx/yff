@@ -2,6 +2,7 @@ package cn.fnmain;
 
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;

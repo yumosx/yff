@@ -9,5 +9,6 @@ public interface WriterNode {
     void onMultipleMsg(MemorySegment memorySegment, WriterTask writerTask);
     void onShutdown(WriterTask writerTask);
     void onWriteableEvent();
+    void onClose(WriterTask writerTask);
     void close();
 }

@@ -2,6 +2,7 @@ package cn.fnmain;
 
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.lib.OsType;
 
 import java.lang.foreign.*;

@@ -2,6 +2,7 @@ package cn.fnmain;
 
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -9,22 +10,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *   Direct memory ReadBuffer, not thread-safe, ReadBuffer is read-only, shouldn't be modified directly
- *   Note that writeIndex is a mutable field, because
- */
+
 public final class ReadBuffer {
-    /**
-     *   Actual memory segment part
-     */
     private final MemorySegment segment;
-    /**
-     *   Actual memory size, should be equal to segment.byteSize()
-     */
+
     private final long size;
-    /**
-     *   Read index starting from 0, step by reading
-     */
+
     private long readIndex;
 
     public ReadBuffer(MemorySegment segment) {

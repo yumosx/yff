@@ -1,6 +1,6 @@
 package cn.fnmain.netapi;
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.Loc;
 import cn.fnmain.Socket;
 import cn.fnmain.node.WriterCallback;
@@ -18,32 +18,32 @@ public record ChannelImpl(Socket socket, Encoder encoder, Decoder decoder, Handl
 
     @Override
     public Socket socket() {
-        return null;
+        return socket;
     }
 
     @Override
     public Encoder encoder() {
-        return null;
+        return encoder;
     }
 
     @Override
     public Decoder decoder() {
-        return null;
+        return decoder;
     }
 
     @Override
     public Handler handler() {
-        return null;
+        return handler;
     }
 
     @Override
     public Poller poller() {
-        return null;
+        return poller;
     }
 
     @Override
     public Writer writer() {
-        return null;
+        return writer;
     }
 
     @Override

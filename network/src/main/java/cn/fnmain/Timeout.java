@@ -2,12 +2,11 @@ package cn.fnmain;
 
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 
 import java.lang.foreign.*;
 
-/*
-timeout是调用底层
-*/
+
 public record Timeout(int val, MemorySegment ptr) {
     private static final StructLayout timespecLayout = MemoryLayout.structLayout(
             ValueLayout.JAVA_LONG.withName("tv_sec"),

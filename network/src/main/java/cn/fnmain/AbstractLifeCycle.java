@@ -1,5 +1,7 @@
 package cn.fnmain;
 
+import cn.fnmain.lib.Constants;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class AbstractLifeCycle implements LifeCycle{

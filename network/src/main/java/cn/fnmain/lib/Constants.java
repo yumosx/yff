@@ -1,10 +1,10 @@
-package cn.fnmain;
+package cn.fnmain.lib;
 
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 
 public final class Constants {
-    //用于writerbuffer
+    //用于writer buffer
     public static final int KB = 1024;
     public static final int MB = 1024 * KB;
     public static final int GB = 1024 * MB;

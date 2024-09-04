@@ -1,7 +1,6 @@
 package cn.fnmain.lib;
 
 
-import cn.fnmain.Constants;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 

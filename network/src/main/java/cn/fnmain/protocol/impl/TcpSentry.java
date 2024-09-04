@@ -1,14 +1,16 @@
-package cn.fnmain.tcp;
+package cn.fnmain.protocol.impl;
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
+import cn.fnmain.protocol.Protocol;
+import cn.fnmain.protocol.Sentry;
 
 import java.lang.foreign.MemorySegment;
 
-public record TcpSentry(Channel channel) implements Sentry{
+public record TcpSentry(Channel channel) implements Sentry {
     private static final OsNetworkLibrary os = OsNetworkLibrary.CURRENT;
 
     @Override
@@ -17,7 +19,7 @@ public record TcpSentry(Channel channel) implements Sentry{
     }
 
     @Override
-    public int onWritableEvent() {
+    public int  onWritableEvent() {
         int errOpt = os.getErrOpt(channel.socket());
         if (errOpt == 0) {
             return Constants.NET_UPDATE;

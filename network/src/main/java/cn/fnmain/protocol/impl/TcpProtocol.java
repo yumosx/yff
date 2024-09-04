@@ -1,11 +1,12 @@
-package cn.fnmain.tcp;
+package cn.fnmain.protocol.impl;
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.Socket;
 import cn.fnmain.execption.ExceptionType;
 import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
+import cn.fnmain.protocol.Protocol;
 import cn.fnmain.thread.WriterTask;
 import cn.fnmain.thread.WriterTaskType;
 

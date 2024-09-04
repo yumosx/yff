@@ -1,12 +1,15 @@
-package cn.fnmain.node;
+package cn.fnmain.node.impl;
 
-import cn.fnmain.Constants;
+import cn.fnmain.execption.ExceptionType;
+import cn.fnmain.execption.FrameworkException;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.State;
 import cn.fnmain.lib.IntMap;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
-import cn.fnmain.tcp.Protocol;
-import cn.fnmain.tcp.Sentry;
+import cn.fnmain.node.PollerNode;
+import cn.fnmain.protocol.Protocol;
+import cn.fnmain.protocol.Sentry;
 import cn.fnmain.thread.PollerTask;
 import cn.fnmain.thread.PollerTaskType;
 import cn.fnmain.thread.WriterTask;
@@ -52,11 +55,16 @@ public class SentryPollerNode implements PollerNode {
         channel.writer().submit(new WriterTask(WriterTaskType.INITIATE, channel, new ProtoAndState(protocol, channelState), null));
     }
 
+
     public void handleEvent(int id) {
-        if (id == Constants.NET_R || id == Constants.NET_W) {
+        if (id == Constants.NET_R || id == Constants.NET_W || id == Constants.NET_RW) {
             ctl(id);
         } else if (id == Constants.NET_UPDATE) {
             updateProtocol();
+        }
+
+        if (id != Constants.NET_IGNORED) {
+            throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
         }
     }
 
@@ -70,15 +78,14 @@ public class SentryPollerNode implements PollerNode {
     }
 
     @Override
-    public void onClose(PollerTask pollerTask) {
-        if (pollerTask.channel() == channel) {
-            close();
-        }
+    public void onRegisterTaggedMsg(PollerTask pollerTask) {
+        throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
     }
 
+
     @Override
-    public void exit(Duration duration) {
-        close();
+    public void onUnRegisterTaggedMsg(PollerTask pollerTask) {
+        throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
     }
 
     public void close() {
@@ -88,6 +95,18 @@ public class SentryPollerNode implements PollerNode {
                 channel.poller().submit(new PollerTask(PollerTaskType.POTENTIAL_EXIT, null, null));
             }
         }
+    }
+
+    @Override
+    public void onClose(PollerTask pollerTask) {
+        if (pollerTask.channel() == channel) {
+            close();
+        }
+    }
+
+    @Override
+    public void exit(Duration duration) {
+        close();
     }
 
     public void closeSentry() {

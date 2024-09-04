@@ -1,5 +1,8 @@
 package cn.fnmain;
 
+/*
+网络框架的状态各种状态操作, 里面封装了一个锁
+*/
 public class State {
     private final Mutex mutex = new Mutex();
     private int state;

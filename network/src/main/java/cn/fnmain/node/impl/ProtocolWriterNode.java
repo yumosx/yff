@@ -1,6 +1,6 @@
-package cn.fnmain.node;
+package cn.fnmain.node.impl;
 
-import cn.fnmain.Constants;
+import cn.fnmain.lib.Constants;
 import cn.fnmain.Mutex;
 import cn.fnmain.State;
 import cn.fnmain.WriteBuffer;
@@ -9,7 +9,9 @@ import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.lib.IntMap;
 import cn.fnmain.lib.OsNetworkLibrary;
 import cn.fnmain.netapi.Channel;
-import cn.fnmain.tcp.Protocol;
+import cn.fnmain.node.WriterCallback;
+import cn.fnmain.node.WriterNode;
+import cn.fnmain.protocol.Protocol;
 import cn.fnmain.thread.WriterTask;
 
 import java.lang.foreign.Arena;
@@ -20,7 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class ProtocolWriterNode implements WriterNode {
-    private final IntMap<PollerNode> nodeMap;
+    private final IntMap<WriterNode> nodeMap;
     private final Channel channel;
     private final Protocol protocol;
     private final State channelState;
@@ -31,7 +33,7 @@ public class ProtocolWriterNode implements WriterNode {
 
     private record Task(Arena arena, MemorySegment memorySegment, WriterCallback writerCallback){}
 
-    public ProtocolWriterNode(IntMap<PollerNode> nodeMap, Channel channel, Protocol protocol, State channelState) {
+    public ProtocolWriterNode(IntMap<WriterNode> nodeMap, Channel channel, Protocol protocol, State channelState) {
         this.nodeMap = nodeMap;
         this.channel = channel;
         this.protocol = protocol;
@@ -77,7 +79,6 @@ public class ProtocolWriterNode implements WriterNode {
             ctl(id);
         }
     }
-
 
     public void onWritableEvent() {
         int r;
@@ -144,6 +145,8 @@ public class ProtocolWriterNode implements WriterNode {
                     channel.encoder().encode(writeBuffer, msg);
                 } catch (RuntimeException e) {
                     System.out.println("err occurred in encoder");
+                    close();
+                    return;
                 }
 
                 if (writeBuffer.writeIndex() > 0) {
@@ -151,6 +154,7 @@ public class ProtocolWriterNode implements WriterNode {
                 } else if (writerCallback != null) {
                     writerCallback.invokeOnsuccess(channel);
                 }
+
             }
         }
     }
@@ -158,7 +162,7 @@ public class ProtocolWriterNode implements WriterNode {
 
     @Override
     public void onMultipleMsg(MemorySegment memorySegment, WriterTask writerTask) {
-
+        if (writerTask.channel() == channel) {}
     }
 
     @Override
@@ -168,6 +172,11 @@ public class ProtocolWriterNode implements WriterNode {
 
     @Override
     public void onWriteableEvent() {
+
+    }
+
+    @Override
+    public void onClose(WriterTask writerTask) {
 
     }
 
