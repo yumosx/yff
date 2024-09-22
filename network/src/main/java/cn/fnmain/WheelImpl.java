@@ -42,9 +42,7 @@ public final class WheelImpl implements Wheel {
         this.wheelThread = Thread.ofPlatform().name("wheel").unstarted(this::run);
     }
 
-    /*
-    计算当前时间轮的任务
-     */
+
     private int calculatePos(int currentSlot, long delayMillis) {
         return (int) ((currentSlot + delayMillis / tick) & mask);
     }
@@ -77,6 +75,9 @@ public final class WheelImpl implements Wheel {
 
 
     private void insertJob(Job job, int pos, long delayMills) {
+        if (delayMills >= bound) {
+            job.pos = -1;
+        }
     }
 
     private void registerPeriodJobIfNeeded(Job job) {

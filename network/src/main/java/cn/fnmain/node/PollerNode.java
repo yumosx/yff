@@ -6,7 +6,7 @@ import java.lang.foreign.MemorySegment;
 import java.time.Duration;
 
 public interface PollerNode {
-    void onReadableEvent(MemorySegment ptr, int len);
+    void onReadableEvent(MemorySegment segment, int len);
 
     void onWriteableEvent();
 

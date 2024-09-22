@@ -8,7 +8,7 @@ public interface WriterNode {
     void onMsg(MemorySegment memorySegment, WriterTask writerTask);
     void onMultipleMsg(MemorySegment memorySegment, WriterTask writerTask);
     void onShutdown(WriterTask writerTask);
-    void onWriteableEvent();
+    void onWriteable(WriterTask writerTask);
     void onClose(WriterTask writerTask);
     void close();
 }

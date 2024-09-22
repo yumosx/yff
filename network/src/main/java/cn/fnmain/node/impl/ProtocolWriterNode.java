@@ -154,7 +154,6 @@ public class ProtocolWriterNode implements WriterNode {
                 } else if (writerCallback != null) {
                     writerCallback.invokeOnsuccess(channel);
                 }
-
             }
         }
     }
@@ -171,7 +170,7 @@ public class ProtocolWriterNode implements WriterNode {
     }
 
     @Override
-    public void onWriteableEvent() {
+    public void onWriteable() {
 
     }
 

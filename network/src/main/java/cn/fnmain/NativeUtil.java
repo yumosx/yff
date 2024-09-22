@@ -167,26 +167,19 @@ public final class NativeUtil {
         return osType;
     }
 
-    /**
-     *   Return current CPU cores count
-     *   Note that usually a physical CPU core could usually carry two threads at the same time, the return value is actually the logical core numbers.
-     */
+
     public static int getCpuCores() {
         return CPU_CORES;
     }
 
-    /**
-     *  Load function from dynamic library
-     */
+
     public static MethodHandle methodHandle(SymbolLookup lookup, String methodName, FunctionDescriptor functionDescriptor, Linker.Option... options) {
         MemorySegment methodPointer = lookup.find(methodName)
                 .orElseThrow(() -> new FrameworkException(ExceptionType.NATIVE, STR."Unable to load target native method : \{methodName}"));
         return linker.downcallHandle(methodPointer, functionDescriptor, options);
     }
 
-    /**
-     *   Due to macro issue, there could be multiple implementations from the dynamic library, then this function could be used
-     */
+
     public static MethodHandle methodHandle(SymbolLookup lookup, List<String> methodNames, FunctionDescriptor functionDescriptor, Linker.Option... options) {
         for (String methodName : methodNames) {
             Optional<MemorySegment> methodPointer = lookup.find(methodName);

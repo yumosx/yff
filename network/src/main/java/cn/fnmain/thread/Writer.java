@@ -51,6 +51,30 @@ public class Writer {
         }
     }
 
+    private void handleMultiMsg(IntMap<WriterNode> nodeMap, WriterTask writerTask, MemorySegment segment) {
+        Channel channel = writerTask.channel();
+        WriterNode writerNode = nodeMap.get(channel.socket().intValue());
+        if (writerNode == null) {
+            writerNode.onMultipleMsg(segment, writerTask);
+        }
+    }
+
+    private void handleWriteable(IntMap<WriterNode> nodeMap, WriterTask writerTask) {
+        Channel channel = writerTask.channel();
+        WriterNode writerNode = nodeMap.get(channel.socket().intValue());
+        if (writerNode == null) {
+            writerNode.onWriteable(writerTask);
+        }
+    }
+
+    private void handleShutDown(IntMap<WriterNode> nodeMap, WriterTask writerTask) {
+        Channel channel = writerTask.channel();
+        WriterNode writerNode = nodeMap.get(channel.socket().intValue());
+        if (writerNode == null) {
+            writerNode.onShutdown(writerTask);
+        }
+    }
+
     private void handleClose(IntMap<WriterNode> nodeMap, WriterTask writerTask) {
         Channel channel = writerTask.channel();
         WriterNode writerNode = nodeMap.get(channel.socket().intValue());
@@ -67,16 +91,31 @@ public class Writer {
             switch (writerTask.type()) {
                 case INITIATE -> handleInitMsg(nodeIntMap, writerTask);
                 case SINGLE_MSG -> handleSingleMsg(nodeIntMap, writerTask, memorySegment);
+                case MULTIPLE_MSG -> handleMultiMsg(nodeIntMap, writerTask, memorySegment);
+                case WRITABLE -> handleWriteable(nodeIntMap, writerTask);
+                case SHUTDOWN-> handleShutDown(nodeIntMap, writerTask);
                 case CLOSE -> handleClose(nodeIntMap, writerTask);
+                case EXIT -> {
+                    if (state == Constants.RUNNING) {
+                        if (nodeIntMap.isEmpty()) {
+                            return;
+                        } else {
+                            state = Constants.CLOSING;
+                        }
+                    }
+                }
+
                 default -> throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
             }
         }
     }
 
+
     private Thread createWriterThread(WriterConfig writerConfig) {
         int sequence = counter.incrementAndGet();
         return Thread.ofPlatform().name(STR."writer-\{sequence}").unstarted(()->{
             System.out.println(STR."writer -\{sequence}");
+
             try (Arena arena = Arena.ofConfined()) {
                 IntMap<WriterNode> nodeIntMap = new IntMap<>(writerConfig.getMapSize());
                 MemorySegment memorySegment = arena.allocateArray(ValueLayout.JAVA_BYTE, writerConfig.getMapSize());

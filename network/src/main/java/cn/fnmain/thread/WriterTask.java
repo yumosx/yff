@@ -8,4 +8,6 @@ public record WriterTask(
         Channel channel,
         Object msg,
         WriterCallback writerCallback
-) {}
+) {
+
+}

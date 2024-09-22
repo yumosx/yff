@@ -68,13 +68,24 @@ public class SentryPollerNode implements PollerNode {
         }
     }
 
-    public void onReadableEvent(MemorySegment ptr, int len) {
-        handleEvent(sentry.onReadableEvent(ptr, len));
+    @Override
+    public void onReadableEvent(MemorySegment segment, int len) {
+        try {
+            handleEvent(sentry.onReadableEvent(segment, len));
+        }catch (RuntimeException e) {
+            System.out.println("Exception thrown in sentryPollerNode when invoking onReadableEvent()");
+            close();
+        }
     }
 
     @Override
     public void onWriteableEvent() {
-        handleEvent(sentry.onWritableEvent());
+        try {
+            handleEvent(sentry.onWritableEvent());
+        } catch (RuntimeException e) {
+            System.out.println("Exception thrown in sentryPollerNode when invoking onWriteableEvent()");
+            close();
+        }
     }
 
     @Override

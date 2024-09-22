@@ -6,7 +6,9 @@ import cn.fnmain.execption.FrameworkException;
 import cn.fnmain.lib.Constants;
 import cn.fnmain.lib.IntMap;
 import cn.fnmain.lib.OsNetworkLibrary;
+import cn.fnmain.netapi.Carrier;
 import cn.fnmain.netapi.Channel;
+import cn.fnmain.netapi.TaggedMsg;
 import cn.fnmain.netapi.TaggedResult;
 import cn.fnmain.node.PollerNode;
 import cn.fnmain.protocol.Protocol;
@@ -20,10 +22,12 @@ import java.util.List;
 
 public class ProtocolPollerNode implements PollerNode {
     private final Protocol protocol;
+    private Carrier carrier;
     private final Channel channel;
     private State channelState;
     private IntMap<PollerNode> nodeMap;
     private WriteBuffer tempBuffer;
+    private static final int MAX_SIZE = 16;
     private static final int MAX_LIST_SIZE = 64;
     private List<Object> entityList = new ArrayList<>(MAX_LIST_SIZE);
 
@@ -126,11 +130,18 @@ public class ProtocolPollerNode implements PollerNode {
     }
 
     @Override
-    public void onReadableEvent(MemorySegment ptr, int len) {
-        int r = protocol.onReadableEvent(ptr, len);
+    public void onReadableEvent(MemorySegment segment, int len) {
+        int r;
+        try {
+           r = protocol.onReadableEvent(segment, len);
+        } catch (RuntimeException e) {
+            System.out.println("Exception thrown in protocolPollerNode when invoking onReadableEvent()");
+            close();
+            return;
+        }
 
         if (r >= 0) {
-            handleReceived(ptr, len, r);
+            handleReceived(segment, len, r);
         } else {
             handleEvent(r);
         }
@@ -148,12 +159,31 @@ public class ProtocolPollerNode implements PollerNode {
 
     @Override
     public void onRegisterTaggedMsg(PollerTask pollerTask) {
-
+        if (pollerTask.channel() == channel && pollerTask.msg() instanceof TaggedMsg taggedMsg) {
+            int tag = taggedMsg.tag();
+            if (tag == channel.SEQ) {
+                if (carrier != null) {
+                    carrier.cas(Carrier.HOLDER, Carrier.FAILED);
+                }
+                carrier = taggedMsg.carrier();
+            } else {
+               if (nodeMap == null) {
+                   nodeMap = new IntMap<>(MAX_SIZE);
+               }
+            }
+        }
     }
 
     @Override
     public void onUnRegisterTaggedMsg(PollerTask pollerTask) {
-
+        if (pollerTask.channel() == channel && pollerTask.msg() instanceof TaggedMsg taggedMsg) {
+            int tag = taggedMsg.tag();
+            if (tag == channel.SEQ) {
+                if (carrier != null && taggedMsg.carrier() == carrier) {
+                    carrier.cas(Carrier.HOLDER, Carrier.FAILED);
+                }
+            }
+        }
     }
 
     @Override

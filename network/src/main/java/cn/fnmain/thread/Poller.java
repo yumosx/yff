@@ -2,7 +2,6 @@ package cn.fnmain.thread;
 
 import cn.fnmain.lib.Constants;
 import cn.fnmain.Mux;
-import cn.fnmain.State;
 import cn.fnmain.Timeout;
 import cn.fnmain.config.PollerConfig;
 import cn.fnmain.execption.ExceptionType;
@@ -14,15 +13,16 @@ import cn.fnmain.netapi.Channel;
 import cn.fnmain.node.PollerNode;
 import cn.fnmain.node.impl.SentryPollerNode;
 import cn.fnmain.protocol.Sentry;
-import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.time.Duration;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class Poller {
     private final Thread pollerThread;
@@ -53,6 +53,7 @@ public class Poller {
 
     private void handleBindMsg(IntMap<PollerNode> map, PollerTask pollerTask) {
         Channel channel = pollerTask.channel();
+
         SentryPollerNode sentryPollerNode = switch (pollerTask.msg()) {
             case Sentry sentry -> new SentryPollerNode(map, channel, sentry, null);
             default -> throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
@@ -64,6 +65,7 @@ public class Poller {
     private void handleUnBindMsg(IntMap<PollerNode>map, PollerTask pollerTask) {
         Channel channel = pollerTask.channel();
         PollerNode pollerNode = map.get(channel.socket().intValue());
+
         if (pollerNode instanceof SentryPollerNode sentryPollerNode) {
             sentryPollerNode.onClose(pollerTask);
         }
@@ -93,7 +95,6 @@ public class Poller {
         }
     }
 
-
     public int processTask(IntMap nodeMap, int state) {
         while (true) {
             PollerTask pollerTask = queue.poll();
@@ -103,14 +104,32 @@ public class Poller {
             }
 
             switch (pollerTask.type()) {
-                case BIND:  handleBindMsg(nodeMap, pollerTask);
-                case UNBIND: handleUnBindMsg(nodeMap, pollerTask);
-                case REGISTER: handleRegisterMsg(nodeMap, pollerTask);
-                case UNREGISTER: handleUnRegisterMsg(nodeMap, pollerTask);
-                case CLOSE: handleCloseMsg(nodeMap, pollerTask);
+                case BIND       ->  handleBindMsg(nodeMap, pollerTask);
+                case UNBIND     ->  handleUnBindMsg(nodeMap, pollerTask);
+                case REGISTER   ->  handleRegisterMsg(nodeMap, pollerTask);
+                case UNREGISTER ->  handleUnRegisterMsg(nodeMap, pollerTask);
+                case CLOSE      ->  handleCloseMsg(nodeMap, pollerTask);
+                case POTENTIAL_EXIT-> {
+                    if (state == Constants.CLOSING && nodeMap.isEmpty()) {
+                        return Constants.STOPPED;
+                    }
+                }
+                case EXIT -> {
+                    if(state == Constants.RUNNING) {
+                        if(nodeMap.isEmpty()) {
+                            return Constants.STOPPED;
+                        }else if(pollerTask.msg() instanceof Duration duration) {
+                            //nodeMap.asList().forEach(pollerNode -> pollerNode.exit(duration));
+                            return Constants.CLOSING;
+                        }else {
+                            throw new FrameworkException(ExceptionType.NETWORK, Constants.UNREACHED);
+                        }
+                    }
+                }
             }
         }
     }
+
     private void processEvent(PollerNode pollerNode, int event, MemorySegment segment, int size) {
         switch (event) {
             case Constants.NET_R:
